@@ -153,6 +153,18 @@ void faiss_IndexIVF_invlists_get_ids(
         size_t list_no,
         idx_t* invlist);
 
+/// Get the raw codes stored in one posting list.
+/// `out` must be pre-allocated with at least
+/// faiss_IndexIVF_get_list_size(index, list_no) * faiss_IndexIVF_code_size(index) bytes.
+/// For IndexIVFFlat, each code is d * sizeof(float) bytes (the raw vector).
+void faiss_IndexIVF_invlists_get_codes(
+        const FaissIndexIVF* index,
+        size_t list_no,
+        uint8_t* out);
+
+/// Return the code_size field of the IndexIVF (bytes per stored vector code).
+size_t faiss_IndexIVF_code_size(const FaissIndexIVF* index);
+
 int faiss_IndexIVF_train_encoder(
         FaissIndexIVF* index,
         idx_t n,

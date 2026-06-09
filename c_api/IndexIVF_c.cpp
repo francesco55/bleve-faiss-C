@@ -164,6 +164,22 @@ void faiss_IndexIVF_invlists_get_ids(
     memcpy(invlist, list, list_size * sizeof(idx_t));
 }
 
+/// get inverted lists codes
+void faiss_IndexIVF_invlists_get_codes(
+        const FaissIndexIVF* index,
+        size_t list_no,
+        uint8_t* out) {
+    const IndexIVF* ivf = reinterpret_cast<const IndexIVF*>(index);
+    const uint8_t* codes = ivf->invlists->get_codes(list_no);
+    size_t list_size = ivf->get_list_size(list_no);
+    size_t code_sz = ivf->code_size;
+    memcpy(out, codes, list_size * code_sz);
+}
+
+size_t faiss_IndexIVF_code_size(const FaissIndexIVF* index) {
+    return reinterpret_cast<const IndexIVF*>(index)->code_size;
+}
+
 int faiss_IndexIVF_train_encoder(
         FaissIndexIVF* index,
         idx_t n,
