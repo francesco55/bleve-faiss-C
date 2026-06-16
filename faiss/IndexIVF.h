@@ -83,6 +83,35 @@ using IVFSearchParameters = SearchParametersIVF;
 
 struct InvertedListScanner;
 struct IndexIVFStats;
+
+/** Maps each inverted list (== centroid) to the worker that owns it.
+ *
+ * All workers in the disaggregated setting hold an identical copy of
+ * this map so they can route probes without a coordinator.  The map is
+ * optional: a nullptr partition_map on an IndexIVF means the index is
+ * running in standalone (non-distributed) mode.
+ */
+struct IVFPartitionMap {
+    /// list_to_worker[list_no] = worker_id that owns that list/centroid.
+    /// -1 means unassigned.  Size == nlist.
+    std::vector<int> list_to_worker;
+
+    /// The worker ID of the node that holds this index instance.
+    int my_worker_id = -1;
+
+    IVFPartitionMap() = default;
+
+    IVFPartitionMap(size_t nlist, int my_worker_id)
+            : list_to_worker(nlist, -1), my_worker_id(my_worker_id) {}
+
+    int owner(size_t list_no) const {
+        return list_to_worker[list_no];
+    }
+
+    bool is_local(size_t list_no) const {
+        return list_to_worker[list_no] == my_worker_id;
+    }
+};
 struct CodePacker;
 
 struct IndexIVFInterface : Level1Quantizer {
@@ -200,6 +229,13 @@ struct IndexIVF : Index, IndexIVFInterface {
     /// do the codes in the invlists encode the vectors relative to the
     /// centroids?
     bool by_residual = true;
+
+    /** Optional partition map for disaggregated deployments.
+     *  nullptr in standalone (non-distributed) mode.
+     *  When set, every worker holds an identical copy of this map and
+     *  uses it to decide whether to scan a list locally or route the
+     *  probe to another worker. */
+    std::shared_ptr<IVFPartitionMap> partition_map;
 
     /** The Inverted file takes a quantizer (an Index) on input,
      * which implements the function mapping a vector to a list
@@ -455,6 +491,21 @@ struct IndexIVF : Index, IndexIVFInterface {
             InvertedLists::subset_type_t subset_type,
             idx_t a1,
             idx_t a2) const;
+
+    /** Copy an arbitrary set of inverted lists to another index.
+     *
+     * Both indexes must have the same nlist and code_size.
+     * other.ntotal is updated to reflect the vectors added.
+     * Lists that are empty in the source are silently skipped.
+     *
+     * @param other     destination index (same nlist / code_size)
+     * @param list_nos  list numbers (== centroid numbers) to copy, size n_lists
+     * @param n_lists   number of lists to copy
+     */
+    void copy_lists_to(
+            IndexIVF& other,
+            const idx_t* list_nos,
+            size_t n_lists) const;
 
     ~IndexIVF() override;
 

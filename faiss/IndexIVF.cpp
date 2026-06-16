@@ -1546,4 +1546,29 @@ IndexIVF::get_centroids_and_cardinality() const {
     return std::make_tuple(centroid_vectors, cardinalities, centroid_ids);
 }
 
+void IndexIVF::copy_lists_to(
+        IndexIVF& other,
+        const idx_t* list_nos,
+        size_t n_lists) const {
+    FAISS_THROW_IF_NOT_MSG(
+            other.nlist == nlist && other.code_size == code_size,
+            "copy_lists_to: other index must have the same nlist and code_size");
+    for (size_t i = 0; i < n_lists; i++) {
+        idx_t list_no = list_nos[i];
+        FAISS_THROW_IF_NOT_FMT(
+                list_no >= 0 && (size_t)list_no < nlist,
+                "copy_lists_to: list_no %ld out of range [0, %zu)",
+                (long)list_no,
+                nlist);
+        size_t list_size = invlists->list_size(list_no);
+        if (list_size == 0) {
+            continue;
+        }
+        InvertedLists::ScopedIds ids(invlists, list_no);
+        InvertedLists::ScopedCodes codes(invlists, list_no);
+        other.invlists->add_entries(list_no, list_size, ids.get(), codes.get());
+        other.ntotal += list_size;
+    }
+}
+
 } // namespace faiss

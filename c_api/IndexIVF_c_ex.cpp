@@ -9,6 +9,7 @@
 // -*- c++ -*-
 #include "IndexIVF_c_ex.h"
 #include <faiss/IndexIVF.h>
+#include <memory>
 #include <faiss/IndexScalarQuantizer.h>
 #include <faiss/IndexIVFRaBitQ.h>
 #include <faiss/IndexBinaryIVF.h>
@@ -242,6 +243,70 @@ int faiss_IndexIVFRaBitQ_query_bitplanes_size(
                 "index is not an IndexIVFRaBitQ instance");
         *size = rabitq_index->query_bitplanes_size();
         return 0;
+    }
+    CATCH_AND_HANDLE
+}
+
+int faiss_IndexIVF_init_partition_map(FaissIndexIVF* index, int my_worker_id) {
+    try {
+        auto* ivf = reinterpret_cast<IndexIVF*>(index);
+        ivf->partition_map = std::make_shared<faiss::IVFPartitionMap>(
+                ivf->nlist, my_worker_id);
+    }
+    CATCH_AND_HANDLE
+}
+
+int faiss_IndexIVF_set_list_worker(
+        FaissIndexIVF* index,
+        size_t list_no,
+        int worker_id) {
+    try {
+        auto* ivf = reinterpret_cast<IndexIVF*>(index);
+        FAISS_THROW_IF_NOT_MSG(
+                ivf->partition_map != nullptr,
+                "partition map not initialized; call faiss_IndexIVF_init_partition_map first");
+        FAISS_THROW_IF_NOT_FMT(
+                list_no < ivf->nlist,
+                "list_no %zu out of range [0, %zu)",
+                list_no,
+                ivf->nlist);
+        ivf->partition_map->list_to_worker[list_no] = worker_id;
+    }
+    CATCH_AND_HANDLE
+}
+
+int faiss_IndexIVF_get_list_worker(
+        const FaissIndexIVF* index,
+        size_t list_no,
+        int* out_worker_id) {
+    try {
+        const auto* ivf = reinterpret_cast<const IndexIVF*>(index);
+        FAISS_THROW_IF_NOT_MSG(
+                ivf->partition_map != nullptr,
+                "partition map not initialized");
+        FAISS_THROW_IF_NOT_FMT(
+                list_no < ivf->nlist,
+                "list_no %zu out of range [0, %zu)",
+                list_no,
+                ivf->nlist);
+        *out_worker_id = ivf->partition_map->owner(list_no);
+    }
+    CATCH_AND_HANDLE
+}
+
+int faiss_IndexIVF_has_partition_map(const FaissIndexIVF* index) {
+    const auto* ivf = reinterpret_cast<const IndexIVF*>(index);
+    return ivf->partition_map != nullptr ? 1 : 0;
+}
+
+int faiss_IndexIVF_copy_lists_to(
+        const FaissIndexIVF* src,
+        FaissIndexIVF* dst,
+        const idx_t* list_nos,
+        size_t n_lists) {
+    try {
+        reinterpret_cast<const IndexIVF*>(src)->copy_lists_to(
+                *reinterpret_cast<IndexIVF*>(dst), list_nos, n_lists);
     }
     CATCH_AND_HANDLE
 }

@@ -208,6 +208,67 @@ int faiss_Set_quantizers(
         FaissIndex* target,
         FaissIndex* source);
 
+/*
+    Initialize a partition map on the index.
+
+    Allocates an nlist-sized map with all entries set to -1 (unassigned)
+    and records my_worker_id as the ID of the current node.  Must be
+    called before faiss_IndexIVF_set_list_worker.
+
+    @param index         - Pointer to the Faiss IVF index
+    @param my_worker_id  - Worker ID of the node holding this index
+*/
+int faiss_IndexIVF_init_partition_map(FaissIndexIVF* index, int my_worker_id);
+
+/*
+    Set the owning worker for a single inverted list (== centroid).
+
+    @param index      - Pointer to the Faiss IVF index
+    @param list_no    - Inverted list number (== centroid number)
+    @param worker_id  - Worker ID that owns this list
+*/
+int faiss_IndexIVF_set_list_worker(
+        FaissIndexIVF* index,
+        size_t list_no,
+        int worker_id);
+
+/*
+    Get the owning worker for a single inverted list (== centroid).
+
+    @param index          - Pointer to the Faiss IVF index
+    @param list_no        - Inverted list number (== centroid number)
+    @param out_worker_id  - Output: worker ID that owns this list, or -1 if unset
+*/
+int faiss_IndexIVF_get_list_worker(
+        const FaissIndexIVF* index,
+        size_t list_no,
+        int* out_worker_id);
+
+/*
+    Returns 1 if the index has a partition map set, 0 otherwise.
+
+    @param index  - Pointer to the Faiss IVF index
+*/
+int faiss_IndexIVF_has_partition_map(const FaissIndexIVF* index);
+
+/*
+    Copy an arbitrary set of inverted lists from src to dst.
+
+    Both indexes must have the same nlist and code_size.
+    dst->ntotal is updated to reflect the vectors added.
+    Lists that are empty in the source are silently skipped.
+
+    @param src       - Source index
+    @param dst       - Destination index (same nlist / code_size)
+    @param list_nos  - List numbers (== centroid numbers) to copy, size n_lists
+    @param n_lists   - Number of lists to copy
+*/
+int faiss_IndexIVF_copy_lists_to(
+        const FaissIndexIVF* src,
+        FaissIndexIVF* dst,
+        const idx_t* list_nos,
+        size_t n_lists);
+
 #ifdef __cplusplus
 }
 #endif
