@@ -12,6 +12,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include "../faiss_c.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,6 +36,31 @@ void faiss_real_to_binary(
         size_t d,
         const float* x_in,
         uint8_t* x_out);
+
+/** Merge k sorted result lists from nshard shards into a single top-k list.
+ *
+ * Both all_distances and all_labels are row-major with layout (nshard, n, k).
+ * Outputs distances and labels have layout (n, k), sorted best-first.
+ * Each per-shard list must already be sorted (best result at index 0).
+ *
+ * @param n              number of query vectors
+ * @param k              number of results per query
+ * @param nshard         number of shards to merge
+ * @param keep_min       1 for L2 (smallest distance wins), 0 for IP (largest)
+ * @param all_distances  input distances, size nshard * n * k
+ * @param all_labels     input labels,    size nshard * n * k
+ * @param distances      output distances, size n * k
+ * @param labels         output labels,    size n * k
+ */
+int faiss_merge_knn_results(
+        size_t n,
+        size_t k,
+        int nshard,
+        int keep_min,
+        const float* all_distances,
+        const idx_t* all_labels,
+        float* distances,
+        idx_t* labels);
 
 #ifdef __cplusplus
 }
