@@ -299,6 +299,72 @@ int faiss_IndexIVF_has_partition_map(const FaissIndexIVF* index) {
     return ivf->partition_map != nullptr ? 1 : 0;
 }
 
+int faiss_IndexIVF_init_partition_map_with_owners(
+        FaissIndexIVF* index,
+        int my_worker_id,
+        const int* list_to_worker,
+        size_t n) {
+    try {
+        auto* ivf = reinterpret_cast<IndexIVF*>(index);
+        FAISS_THROW_IF_NOT_FMT(
+                n == ivf->nlist,
+                "list_to_worker length %zu does not match nlist %zu",
+                n,
+                ivf->nlist);
+        ivf->partition_map =
+                std::make_shared<faiss::IVFPartitionMap>(n, my_worker_id);
+        std::copy(
+                list_to_worker,
+                list_to_worker + n,
+                ivf->partition_map->list_to_worker.begin());
+    }
+    CATCH_AND_HANDLE
+}
+
+int faiss_IndexIVF_set_list_workers(
+        FaissIndexIVF* index,
+        const idx_t* list_nos,
+        const int* worker_ids,
+        size_t n) {
+    try {
+        auto* ivf = reinterpret_cast<IndexIVF*>(index);
+        FAISS_THROW_IF_NOT_MSG(
+                ivf->partition_map != nullptr,
+                "partition map not initialized; call faiss_IndexIVF_init_partition_map first");
+        for (size_t i = 0; i < n; i++) {
+            FAISS_THROW_IF_NOT_FMT(
+                    (size_t)list_nos[i] < ivf->nlist,
+                    "list_no %zu out of range [0, %zu)",
+                    (size_t)list_nos[i],
+                    ivf->nlist);
+            ivf->partition_map->list_to_worker[list_nos[i]] = worker_ids[i];
+        }
+    }
+    CATCH_AND_HANDLE
+}
+
+int faiss_IndexIVF_get_list_workers(
+        const FaissIndexIVF* index,
+        const idx_t* list_nos,
+        size_t n,
+        int* out_worker_ids) {
+    try {
+        const auto* ivf = reinterpret_cast<const IndexIVF*>(index);
+        FAISS_THROW_IF_NOT_MSG(
+                ivf->partition_map != nullptr,
+                "partition map not initialized");
+        for (size_t i = 0; i < n; i++) {
+            FAISS_THROW_IF_NOT_FMT(
+                    (size_t)list_nos[i] < ivf->nlist,
+                    "list_no %zu out of range [0, %zu)",
+                    (size_t)list_nos[i],
+                    ivf->nlist);
+            out_worker_ids[i] = ivf->partition_map->owner(list_nos[i]);
+        }
+    }
+    CATCH_AND_HANDLE
+}
+
 int faiss_IndexIVF_copy_lists_to(
         const FaissIndexIVF* src,
         FaissIndexIVF* dst,

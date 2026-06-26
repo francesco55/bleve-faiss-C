@@ -233,6 +233,20 @@ int faiss_IndexIVF_set_list_worker(
         int worker_id);
 
 /*
+    Batch-write the owning worker ID for an arbitrary set of inverted lists.
+
+    @param index       - Pointer to the Faiss IVF index
+    @param list_nos    - Inverted list numbers (== centroid numbers) to assign, size n
+    @param worker_ids  - Worker ID for each list, size n
+    @param n           - Number of entries in list_nos / worker_ids
+*/
+int faiss_IndexIVF_set_list_workers(
+        FaissIndexIVF* index,
+        const idx_t* list_nos,
+        const int* worker_ids,
+        size_t n);
+
+/*
     Get the owning worker for a single inverted list (== centroid).
 
     @param index          - Pointer to the Faiss IVF index
@@ -250,6 +264,35 @@ int faiss_IndexIVF_get_list_worker(
     @param index  - Pointer to the Faiss IVF index
 */
 int faiss_IndexIVF_has_partition_map(const FaissIndexIVF* index);
+
+/*
+    Initialize the partition map and bulk-write all list→worker assignments
+    in a single call.  Replaces any existing partition map.
+
+    @param index          - Pointer to the Faiss IVF index
+    @param my_worker_id   - Worker ID of the node holding this index
+    @param list_to_worker - Array of worker IDs, one per list; length must equal nlist
+    @param n              - Length of list_to_worker (must equal nlist)
+*/
+int faiss_IndexIVF_init_partition_map_with_owners(
+        FaissIndexIVF* index,
+        int my_worker_id,
+        const int* list_to_worker,
+        size_t n);
+
+/*
+    Batch-read the owning worker ID for an arbitrary set of inverted lists.
+
+    @param index          - Pointer to the Faiss IVF index
+    @param list_nos       - Inverted list numbers (== centroid numbers) to query, size n
+    @param n              - Number of entries in list_nos / out_worker_ids
+    @param out_worker_ids - Output: worker ID for each list, size n
+*/
+int faiss_IndexIVF_get_list_workers(
+        const FaissIndexIVF* index,
+        const idx_t* list_nos,
+        size_t n,
+        int* out_worker_ids);
 
 /*
     Copy an arbitrary set of inverted lists from src to dst.
