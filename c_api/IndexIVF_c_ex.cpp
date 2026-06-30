@@ -376,3 +376,29 @@ int faiss_IndexIVF_copy_lists_to(
     }
     CATCH_AND_HANDLE
 }
+
+int faiss_IndexIVF_search_closest_centroids_with_workers(
+        const FaissIndexIVF* index,
+        idx_t n,
+        const float* x,
+        idx_t nprobe,
+        int* out_worker_ids,
+        idx_t* out_centroid_ids,
+        float* out_distances) {
+    try {
+        const auto* ivf = reinterpret_cast<const IndexIVF*>(index);
+        FAISS_THROW_IF_NOT_MSG(
+                ivf->partition_map != nullptr,
+                "partition map not initialized; call faiss_IndexIVF_init_partition_map first");
+        FAISS_THROW_IF_NOT_MSG(nprobe > 0, "nprobe must be > 0");
+
+        ivf->quantizer->search(n, x, nprobe, out_distances, out_centroid_ids);
+
+        const idx_t total = n * nprobe;
+        for (idx_t i = 0; i < total; i++) {
+            idx_t cid = out_centroid_ids[i];
+            out_worker_ids[i] = (cid >= 0) ? ivf->partition_map->owner(cid) : -1;
+        }
+    }
+    CATCH_AND_HANDLE
+}

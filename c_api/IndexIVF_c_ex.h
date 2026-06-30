@@ -312,6 +312,36 @@ int faiss_IndexIVF_copy_lists_to(
         const idx_t* list_nos,
         size_t n_lists);
 
+/*
+    Coarse-quantize n queries, look up the owning worker for each resulting
+    centroid from the partition map, and write the results into three parallel
+    flat (row-major) arrays of size n × nprobe.  Caller pre-allocates all
+    output buffers.
+
+    Sentinel centroid IDs (< 0, emitted by FAISS when fewer than nprobe
+    neighbours exist) are passed through unchanged; their out_worker_ids
+    entry is set to -1.
+
+    Requires the index to have a partition map initialised via
+    faiss_IndexIVF_init_partition_map or faiss_IndexIVF_init_partition_map_with_owners.
+
+    @param index            - IVF index with an initialised partition map
+    @param n                - number of queries
+    @param x                - query vectors, size n × d (row-major)
+    @param nprobe           - centroids to probe per query (must be > 0)
+    @param out_worker_ids   - output worker IDs, size n × nprobe
+    @param out_centroid_ids - output centroid IDs, size n × nprobe
+    @param out_distances    - output distances, size n × nprobe
+*/
+int faiss_IndexIVF_search_closest_centroids_with_workers(
+        const FaissIndexIVF* index,
+        idx_t n,
+        const float* x,
+        idx_t nprobe,
+        int* out_worker_ids,
+        idx_t* out_centroid_ids,
+        float* out_distances);
+
 #ifdef __cplusplus
 }
 #endif
