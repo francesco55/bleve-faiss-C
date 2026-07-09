@@ -342,6 +342,38 @@ int faiss_IndexIVF_search_closest_centroids_with_workers(
         idx_t* out_centroid_ids,
         float* out_distances);
 
+/*
+    Train the index on n vectors and immediately add them with sequential IDs.
+
+    Equivalent to faiss_Index_train followed by faiss_Index_add, but avoids
+    two separate call sites in the caller.
+
+    @param index  - Pointer to the Faiss IVF index
+    @param n      - Number of vectors
+    @param x      - Input vectors, size n * d
+*/
+int faiss_IndexIVF_train_and_add(
+        FaissIndexIVF* index,
+        idx_t n,
+        const float* x);
+
+/*
+    Train the index on n vectors and immediately add them with caller-supplied IDs.
+
+    Equivalent to faiss_Index_train followed by faiss_Index_add_with_ids, but
+    avoids two separate call sites in the caller.
+
+    @param index  - Pointer to the Faiss IVF index
+    @param n      - Number of vectors
+    @param x      - Input vectors, size n * d
+    @param xids   - Vector IDs, size n
+*/
+int faiss_IndexIVF_train_and_add_with_ids(
+        FaissIndexIVF* index,
+        idx_t n,
+        const float* x,
+        const idx_t* xids);
+
 #ifdef __cplusplus
 }
 #endif

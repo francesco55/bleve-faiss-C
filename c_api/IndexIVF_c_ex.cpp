@@ -402,3 +402,28 @@ int faiss_IndexIVF_search_closest_centroids_with_workers(
     }
     CATCH_AND_HANDLE
 }
+
+int faiss_IndexIVF_train_and_add(
+        FaissIndexIVF* index,
+        idx_t n,
+        const float* x) {
+    try {
+        auto* ivf = reinterpret_cast<IndexIVF*>(index);
+        ivf->train(n, x);
+        ivf->add(n, x);
+    }
+    CATCH_AND_HANDLE
+}
+
+int faiss_IndexIVF_train_and_add_with_ids(
+        FaissIndexIVF* index,
+        idx_t n,
+        const float* x,
+        const idx_t* xids) {
+    try {
+        auto* ivf = reinterpret_cast<IndexIVF*>(index);
+        ivf->train(n, x);
+        ivf->add_with_ids(n, x, xids);
+    }
+    CATCH_AND_HANDLE
+}
