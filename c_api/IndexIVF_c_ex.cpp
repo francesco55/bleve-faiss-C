@@ -14,6 +14,7 @@
 #include <faiss/IndexIVFRaBitQ.h>
 #include <faiss/IndexBinaryIVF.h>
 #include <faiss/clone_index.h>
+#include <faiss/impl/FaissAssert.h>
 #include "macros_impl.h"
 
 using faiss::IndexIVF;
@@ -424,6 +425,30 @@ int faiss_IndexIVF_train_and_add_with_ids(
         auto* ivf = reinterpret_cast<IndexIVF*>(index);
         ivf->train(n, x);
         ivf->add_with_ids(n, x, xids);
+    }
+    CATCH_AND_HANDLE
+}
+
+int faiss_IndexIVF_set_quantizer_centroids(
+        FaissIndexIVF* index,
+        const float* centroids,
+        size_t nlist,
+        size_t d) {
+    try {
+        auto* ivf = reinterpret_cast<IndexIVF*>(index);
+        FAISS_THROW_IF_NOT_MSG(
+                ivf->nlist == nlist,
+                "set_quantizer_centroids: nlist does not match index->nlist");
+        FAISS_THROW_IF_NOT_MSG(
+                static_cast<size_t>(ivf->d) == d,
+                "set_quantizer_centroids: d does not match index->d");
+        // Replace the coarse-quantizer contents with the given centroids in order
+        // (inverted list i == centroids[i]); no k-means. The quantizer for an
+        // IVF*,Flat index is a flat index, which is always trained, so adding the
+        // centroids is sufficient to mark the whole index trained.
+        ivf->quantizer->reset();
+        ivf->quantizer->add(static_cast<idx_t>(nlist), centroids);
+        ivf->is_trained = true;
     }
     CATCH_AND_HANDLE
 }

@@ -374,6 +374,26 @@ int faiss_IndexIVF_train_and_add_with_ids(
         const float* x,
         const idx_t* xids);
 
+/*
+    Directly set the coarse-quantizer centroids of an IVF index, bypassing k-means
+    training. Resets the quantizer and adds the `nlist` centroids in order, so
+    inverted list i corresponds to centroids[i*d .. i*d + d), then marks the index
+    trained. Use when the centroids are already known (e.g. routing centroids):
+    training is wasteful and, for nlist points into nlist clusters, may reorder the
+    lists relative to the input.
+
+    @param index      - Pointer to the Faiss IVF index (index->nlist must equal nlist,
+                        index->d must equal d)
+    @param centroids  - Row-major centroid vectors, size nlist * d
+    @param nlist      - Number of centroids (must equal index->nlist)
+    @param d          - Vector dimension (must equal index->d)
+*/
+int faiss_IndexIVF_set_quantizer_centroids(
+        FaissIndexIVF* index,
+        const float* centroids,
+        size_t nlist,
+        size_t d);
+
 #ifdef __cplusplus
 }
 #endif
