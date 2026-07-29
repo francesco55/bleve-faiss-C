@@ -452,3 +452,32 @@ int faiss_IndexIVF_set_quantizer_centroids(
     }
     CATCH_AND_HANDLE
 }
+
+int faiss_IndexIVF_add_with_ids_and_lists(
+        FaissIndexIVF* index,
+        idx_t n,
+        const float* x,
+        const idx_t* xids,
+        const idx_t* list_nos) {
+    try {
+        auto* ivf = reinterpret_cast<IndexIVF*>(index);
+        FAISS_THROW_IF_NOT_MSG(
+                list_nos, "add_with_ids_and_lists: list_nos must not be null");
+        // Validate up front: add_core drops a -1 list_no but still counts the
+        // vector in ntotal, and an out-of-range one would run off the inverted
+        // lists. Either way the caller would never learn the add went wrong.
+        for (idx_t i = 0; i < n; i++) {
+            FAISS_THROW_IF_NOT_FMT(
+                    list_nos[i] >= 0 &&
+                            static_cast<size_t>(list_nos[i]) < ivf->nlist,
+                    "add_with_ids_and_lists: list_no %lld at position %lld is out of range [0, %zu)",
+                    static_cast<long long>(list_nos[i]),
+                    static_cast<long long>(i),
+                    ivf->nlist);
+        }
+        // The coarse assignment is already known, so go straight to add_core and
+        // skip the quantizer scan that add_with_ids would perform.
+        ivf->add_core(n, x, xids, list_nos);
+    }
+    CATCH_AND_HANDLE
+}

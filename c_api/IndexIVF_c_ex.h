@@ -394,6 +394,28 @@ int faiss_IndexIVF_set_quantizer_centroids(
         size_t nlist,
         size_t d);
 
+/*
+    Add vectors with explicit ids to caller-chosen inverted lists, skipping the
+    coarse-quantizer scan that faiss_Index_add_with_ids performs. Use when the
+    owning list is already known (e.g. resolved during routing).
+
+    Every list_no is validated against index->nlist: add_core skips a list_no of
+    -1 while still incrementing ntotal (the vector would be silently lost), and
+    an out-of-range list_no would index past the inverted lists.
+
+    @param index     - Pointer to the Faiss IVF index
+    @param n         - Number of vectors
+    @param x         - Row-major vectors, size n * index->d
+    @param xids      - Vector ids, size n
+    @param list_nos  - Target inverted list per vector, size n, each in [0, nlist)
+*/
+int faiss_IndexIVF_add_with_ids_and_lists(
+        FaissIndexIVF* index,
+        idx_t n,
+        const float* x,
+        const idx_t* xids,
+        const idx_t* list_nos);
+
 #ifdef __cplusplus
 }
 #endif
